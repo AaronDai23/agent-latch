@@ -18,16 +18,25 @@ npm install agent-latch
 
 ```bash
 git clone https://github.com/aarondai23/agent-latch && cd agent-latch
-npm install && npm run demo:dropin
+npm install && npm run demo:screenshot
 ```
 
 ```
-WITHOUT latch
-  Mailbox: [ { to: 'board@acme.com', subject: 'Q4 secrets' } ]   ← model invented
+┌──────────────────────────────────────────────────────────┐
+│ WITHOUT latch                                            │
+├──────────────────────────────────────────────────────────┤
+│ Model tool call:                                         │
+│   send_email({ to: "board@acme.com" })                   │
+│ Result:  ✗ SENT (invented recipient)                     │
+│ Mailbox: board@acme.com  ← leaked                        │
+└──────────────────────────────────────────────────────────┘
 
-WITH latch
-  Invented board@:  { blocked: true }                              ← stopped
-  User-said alice@: { sent: true }                                 ← allowed
+┌──────────────────────────────────────────────────────────┐
+│ WITH agent-latch                                         │
+├──────────────────────────────────────────────────────────┤
+│ Model tool call #1:  board@acme.com  → BLOCKED ✓         │
+│ Model tool call #2:  alice@acme.com  → ALLOWED ✓         │
+└──────────────────────────────────────────────────────────┘
 ```
 
 **100 invented recipients → 0 escapes** (`npm run bench`)
@@ -125,7 +134,8 @@ npm run demo:audit
 | Command | What |
 |---|---|
 | `npm run demo` | Sealed-value aha |
-| `npm run demo:dropin` | Plain-JSON before/after |
+| `npm run demo:dropin` | Plain-JSON before/after (verbose) |
+| `npm run demo:screenshot` | Clean output for README / GIF |
 | `npm run demo:audit` | Why allow/deny |
 | `npm run example:ai-sdk` | Vercel AI SDK pattern |
 | `npm run bench` | 100 → 0 escapes |

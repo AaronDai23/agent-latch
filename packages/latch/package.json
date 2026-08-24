@@ -24,6 +24,7 @@
     "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
     "demo": "tsc -p tsconfig.build.json && node --import tsx demo/aha.ts",
     "demo:dropin": "tsc -p tsconfig.build.json && node --import tsx demo/dropin.ts",
+    "demo:screenshot": "tsc -p tsconfig.build.json && node --import tsx demo/screenshot.ts",
     "demo:audit": "tsc -p tsconfig.build.json && node --import tsx demo/audit.ts",
     "bench": "tsc -p tsconfig.build.json && node --import tsx demo/bench.ts",
     "prepublishOnly": "npm test && npm run build"

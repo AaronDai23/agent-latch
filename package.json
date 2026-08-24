@@ -12,6 +12,7 @@
     "test": "npm run test -w agent-latch -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
     "demo": "npm run demo -w agent-latch",
     "demo:dropin": "npm run demo:dropin -w agent-latch",
+    "demo:screenshot": "npm run demo:screenshot -w agent-latch",
     "demo:audit": "npm run demo:audit -w agent-latch",
     "example:ai-sdk": "node --import tsx examples/vercel-ai-sdk/agent.ts",
     "demo:all": "npm run demo -w agent-latch && npm run demo:dropin -w agent-latch && npm run demo:audit -w agent-latch && npm run example:ai-sdk && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
