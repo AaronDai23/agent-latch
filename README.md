@@ -8,124 +8,113 @@ Most guardrails filter text. Latch seals **values**. If `to`, `accountId`, or `p
 npm install agent-latch
 ```
 
+## The 5-line drop-in
+
+Tool-calling APIs always pass **plain JSON**. Latch indexes what the user (or a tool) already grounded, then wraps your handlers:
+
 ```ts
-import { createProvenance } from "agent-latch";
+import { createLatch, wrapTools } from "agent-latch";
 
-const { store, gate } = createProvenance();
-
-gate.policy({
+const latch = createLatch();
+latch.gate.policy({
   tool: "send_email",
   args: [{ path: "to", allow: ["user", "tool"] }],
 });
 
-// ✅ user typed it
-gate.check("send_email", {
-  to: store.fromUser("alice@acme.com", "msg-1"),
+// User said “email alice@acme.com”
+latch.store.fromUser("alice@acme.com", "msg-1");
+
+const tools = wrapTools(latch, {
+  send_email: async (args) => sendEmail(args),
+}, {
+  onDenied: (err) => ({ error: "blocked_ungrounded_args", detail: err.detail }),
 });
 
-// ❌ model guessed it — throws ProvenanceError
-gate.check("send_email", {
-  to: store.fromModel("board@acme.com"),
-});
+await tools.send_email({ to: "alice@acme.com" }); // ✅ same value user said
+await tools.send_email({ to: "board@acme.com" }); // ❌ model invented → blocked
 ```
 
-## Why people forward this
+Works with OpenAI / Anthropic / Vercel AI SDK style tool maps — no framework lock-in.
 
-Agents do not usually fail by picking the wrong tool. They fail by **filling the right tool with a hallucinated ID, email, or path**. That bug is silent, confident, and expensive.
+## Why this pain is real
 
-Latch makes origin a hard gate:
+Agents rarely fail by picking the wrong tool. They fail by **filling the right tool with a hallucinated ID, email, or path**. Text filters do not see that. Latch does.
 
 | Origin | Meaning | Typical allow on write tools |
 |---|---|---|
 | `user` | From an utterance, form, or click | ✅ |
 | `tool` | From a verified tool result | ✅ |
-| `model` | Generated / unsealed plain value | ❌ |
+| `model` | Generated / unknown plain value | ❌ |
 | `derived` | Transform of sealed parents | inherits parents |
 
-**Invariant:** every sensitive argument’s ultimate grounding must be explicitly allowed. Untagged values are treated as `model`.
+**Invariant:** every sensitive argument’s ultimate grounding must be explicitly allowed.
 
-## 30-second aha
+## Honest scope
+
+Latch guarantees: *ungrounded sensitive args cannot execute — if you wrap the tool path.*
+
+It does **not** guarantee: correct CRM data, users approving bad addresses, or safety if you bypass `wrapTools` / `gate.check`.
+
+## Try it
 
 ```bash
-git clone <this-repo> && cd latch
 npm install
-npm run demo      # invents a recipient → DENIED
-npm run bench     # 100 invented emails → 0 escapes
+npm run demo          # sealed-value aha
+npm run demo:dropin   # plain-JSON tool-call before/after
+npm run bench         # 100 invented emails → 0 escapes
 ```
 
-## Drop into a tool loop
+## CRM → send pattern
 
 ```ts
-import { createProvenance, ProvenanceError } from "agent-latch";
+import { createLatch, sealFields, wrapTools } from "agent-latch";
 
-const { store, gate } = createProvenance();
-gate.policy({
+const latch = createLatch();
+latch.gate.policy({
   tool: "send_email",
   args: [{ path: "to", allow: ["user", "tool"] }],
 });
 
-async function callTool(name: string, args: Record<string, unknown>) {
-  try {
-    const plain = gate.check(name, args); // unwraps sealed values
-    return await realSendEmail(plain);
-  } catch (e) {
-    if (e instanceof ProvenanceError) {
-      return { error: "blocked_ungrounded_args", detail: e.detail };
-    }
-    throw e;
-  }
-}
-
-// When the user speaks:
-const to = store.fromUser(extractedEmail, utteranceId);
-// When CRM returns:
-const to = store.fromTool(row.email, "crm.lookup", callId);
-// When the model proposes a string with no seal — gate.check rejects it.
+const tools = wrapTools(latch, {
+  lookup_email: async (args) => {
+    const row = await crm.find(args.name);
+    // indexes row.email as tool-grounded for later plain JSON reuse
+    return sealFields(latch.store, "lookup_email", "c1", row, ["email"]);
+  },
+  send_email: async (args) => sendEmail(args),
+});
 ```
 
-No framework lock-in. One `gate.check` before every mutating tool.
+## Evidence
 
-## Evidence, not vibes
+`npm run bench`:
 
-`npm run bench` simulates 100 model-invented recipients against a `send_email` policy:
+- **without Latch:** 100/100 invented recipients would send  
+- **with Latch:** 0 escapes  
 
-- **with Latch:** 0 sends
-- **without:** 100 sends to fiction
-
-That is the recommendable sentence: *“It blocked every invented recipient in the suite.”*
-
-## Companions (install when the next pain shows up)
-
-Start with `latch`. Add these only when you hit the matching failure:
+## Companions (later)
 
 | Package | When you need it |
 |---|---|
-| [`agent-latch-saga`](./packages/saga) | Multi-step writes leave the world half-broken — need LIFO compensate |
-| [`agent-latch-continuity`](./packages/continuity) | Retries / workers race on authoritative agent state |
-| [`agent-latch-witness`](./packages/witness) | High-salience memories go stale but still enter the prompt |
+| [`agent-latch-saga`](./packages/saga) | Multi-step writes leave the world half-broken |
+| [`agent-latch-continuity`](./packages/continuity) | Retries / workers race on agent state |
+| [`agent-latch-witness`](./packages/witness) | Stale high-salience memory poisons the prompt |
 
-Same brand, same “hard invariant” style — but **one wedge first**.
-
-## API surface (intentionally tiny)
+## API
 
 ```ts
-store.fromUser(value, ref)
-store.fromTool(value, tool, callId)
-store.fromModel(value, note?)
-store.derive(value, parents, transform)
-
-gate.policy({ tool, args: [{ path, allow }] })
-gate.check(tool, args) // → plain args or throws ProvenanceError
+createLatch() / createProvenance()
+store.fromUser / fromTool / fromModel / derive
+store.lookupGrounded(value)
+gate.policy({ tool, args })
+gate.check(tool, args)
+wrapTools(latch, tools, { onDenied? })
+sealFields(store, tool, callId, result, paths)
 ```
 
 ## Status
 
-v0.1 — correct core, MIT, tested. Not a full AgentOps platform on purpose.
-
-```bash
-npm test
-npm run build
-```
+v0.1.x — MIT, tested. A hard gate, not an AgentOps platform.
 
 ## License
 

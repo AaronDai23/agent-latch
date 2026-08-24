@@ -11,7 +11,8 @@
     "build": "npm run build -w agent-latch -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
     "test": "npm run test -w agent-latch -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
     "demo": "npm run demo -w agent-latch",
-    "demo:all": "npm run demo -w agent-latch && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
+    "demo:dropin": "npm run demo:dropin -w agent-latch",
+    "demo:all": "npm run demo -w agent-latch && npm run demo:dropin -w agent-latch && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
     "bench": "npm run bench -w agent-latch",
     "publish:hero": "npm publish -w agent-latch --access public",
     "typecheck": "npm run build"

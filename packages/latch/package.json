@@ -1,6 +1,6 @@
 {
   "name": "agent-latch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Stop AI agents from calling dangerous tools with model-invented arguments",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,7 +12,10 @@
     }
   },
   "files": [
-    "dist",
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
     "README.md",
     "LICENSE"
   ],
@@ -20,6 +23,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
     "demo": "tsc -p tsconfig.build.json && node --import tsx demo/aha.ts",
+    "demo:dropin": "tsc -p tsconfig.build.json && node --import tsx demo/dropin.ts",
     "bench": "tsc -p tsconfig.build.json && node --import tsx demo/bench.ts",
     "prepublishOnly": "npm test && npm run build"
   },

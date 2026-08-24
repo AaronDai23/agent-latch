@@ -5,7 +5,8 @@
  * carries an unbroken provenance chain to the user or a verified tool.
  * Model-generated values are tainted and cannot cross the gate.
  *
- * Untagged plain values are treated as model-tainted by default.
+ * Real tool-calling APIs pass plain JSON. Latch indexes user/tool values so
+ * a later plain string that equals a known grounded value still passes.
  */
 
 export type SourceKind = "user" | "tool" | "model" | "derived";
@@ -66,7 +67,22 @@ function getPath(obj: unknown, path: string): unknown {
   return cur;
 }
 
-function isSealed(v: unknown): v is Sealed {
+function setPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split(".").filter(Boolean);
+  if (!parts.length) return;
+  let cur: Record<string, unknown> = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i]!;
+    const next = cur[p];
+    if (next === null || typeof next !== "object" || Array.isArray(next)) {
+      cur[p] = {};
+    }
+    cur = cur[p] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]!] = value;
+}
+
+export function isSealed(v: unknown): v is Sealed {
   return (
     typeof v === "object" &&
     v !== null &&
@@ -75,45 +91,75 @@ function isSealed(v: unknown): v is Sealed {
   );
 }
 
+/** Canonical key so plain JSON args can match earlier user/tool seals. */
+export function valueKey(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const t = typeof value;
+  if (t === "string" || t === "number" || t === "boolean") {
+    return `${t}:${JSON.stringify(value)}`;
+  }
+  return null;
+}
+
 /**
  * Seals values with origin. Only sealed values can pass tool gates.
+ * User/tool (and clean derived) values are indexed for plain-JSON matching.
  */
 export class ProvenanceStore {
   private readonly byId = new Map<string, Sealed>();
+  /** valueKey → sealed id for grounded (non-model) values */
+  private readonly byValue = new Map<string, string>();
 
   /** Seal a user-provided value (from utterance / form / click). */
   fromUser<T>(value: T, ref: string): Sealed<T> {
-    return this.mint(value, { kind: "user", ref });
+    return this.mint(value, { kind: "user", ref }, true);
   }
 
   /** Seal a verified tool output field. */
   fromTool<T>(value: T, tool: string, callId: string): Sealed<T> {
-    return this.mint(value, { kind: "tool", tool, callId });
+    return this.mint(value, { kind: "tool", tool, callId }, true);
   }
 
-  /** Explicitly mark model output as tainted. */
+  /** Explicitly mark model output as tainted. Not indexed as grounded. */
   fromModel<T>(value: T, note?: string): Sealed<T> {
-    return this.mint(value, note !== undefined ? { kind: "model", note } : { kind: "model" });
+    return this.mint(value, note !== undefined ? { kind: "model", note } : { kind: "model" }, false);
   }
 
   /**
    * Derive a new value from sealed parents (e.g. normalize email).
-   * Kind becomes "derived"; gate resolves through parents.
+   * Indexed only if parents ultimately ground without model.
    */
   derive<T>(value: T, parents: Sealed[], transform: string): Sealed<T> {
     if (!parents.length) {
       throw new ProvenanceError("derive() requires at least one parent", { transform });
     }
     for (const p of parents) this.assertKnown(p);
-    return this.mint(value, {
-      kind: "derived",
-      parents: parents.map((p) => p.id),
-      transform,
-    });
+    const sealed = this.mint(
+      value,
+      {
+        kind: "derived",
+        parents: parents.map((p) => p.id),
+        transform,
+      },
+      false,
+    );
+    const g = this.grounding(sealed);
+    if (g.size && !g.has("model")) {
+      this.index(sealed);
+    }
+    return sealed;
   }
 
   get(id: string): Sealed | undefined {
     return this.byId.get(id);
+  }
+
+  /** Look up a previously grounded plain value (user/tool/clean derived). */
+  lookupGrounded(value: unknown): Sealed | undefined {
+    const key = valueKey(value);
+    if (!key) return undefined;
+    const id = this.byValue.get(key);
+    return id ? this.byId.get(id) : undefined;
   }
 
   /** Resolve ultimate grounding kinds (user/tool/model) through derived chains. */
@@ -141,7 +187,7 @@ export class ProvenanceStore {
     return sealed.value;
   }
 
-  private mint<T>(value: T, source: Source): Sealed<T> {
+  private mint<T>(value: T, source: Source, indexable: boolean): Sealed<T> {
     const sealed: Sealed<T> = {
       __brand: "latch.sealed",
       id: uid(),
@@ -149,7 +195,13 @@ export class ProvenanceStore {
       source,
     };
     this.byId.set(sealed.id, sealed as Sealed);
+    if (indexable) this.index(sealed as Sealed);
     return sealed;
+  }
+
+  private index(sealed: Sealed): void {
+    const key = valueKey(sealed.value);
+    if (key) this.byValue.set(key, sealed.id);
   }
 
   private assertKnown(sealed: Sealed): void {
@@ -164,7 +216,8 @@ export class ProvenanceStore {
 
 /**
  * Gate: before invoking a tool, check each sensitive arg's provenance.
- * Plain (unsealed) values are treated as model-tainted.
+ * Plain values matching an indexed user/tool seal are treated as grounded.
+ * Other plain values are model-tainted.
  */
 export class ProvenanceGate {
   private readonly policies = new Map<string, ToolPolicy>();
@@ -180,10 +233,16 @@ export class ProvenanceGate {
    * Validate args. Returns plain unwrapped args if ok.
    * Throws ProvenanceError if any sensitive path fails.
    */
+  /** True if this tool has a registered policy (write tools should). */
+  hasPolicy(tool: string): boolean {
+    return this.policies.has(tool);
+  }
+
   check(tool: string, args: Record<string, unknown>): Record<string, unknown> {
     const policy = this.policies.get(tool);
+    // No policy → pass-through (only declare policies on mutating / sensitive tools)
     if (!policy) {
-      throw new ProvenanceError(`No provenance policy for tool: ${tool}`, { tool });
+      return unwrapDeep(args, this.store) as Record<string, unknown>;
     }
 
     for (const rule of policy.args) {
@@ -201,12 +260,15 @@ export class ProvenanceGate {
       if (isSealed(raw)) {
         sealed = raw;
       } else {
-        // Untagged = model-tainted. Seal temporarily for uniform error reporting.
-        sealed = this.store.fromModel(raw, "unsealed plain value");
+        const hit = this.store.lookupGrounded(raw);
+        if (hit) {
+          sealed = hit;
+        } else {
+          sealed = this.store.fromModel(raw, "unsealed plain value");
+        }
       }
 
       const grounding = this.store.grounding(sealed);
-      // Invariant: every ultimate origin must be explicitly allowed.
       const denied = [...grounding].filter((k) => !allowed.has(k));
       if (!grounding.size || denied.length) {
         throw new ProvenanceError(
@@ -241,6 +303,63 @@ function unwrapDeep(value: unknown, store: ProvenanceStore): unknown {
   return value;
 }
 
+export type ToolHandler = (
+  args: Record<string, unknown>,
+) => Promise<unknown> | unknown;
+
+export interface WrapToolsOptions {
+  /** Return value (or throw) when provenance denies a call. Default: rethrow. */
+  onDenied?: (err: ProvenanceError, tool: string, args: Record<string, unknown>) => unknown;
+}
+
+/**
+ * Drop-in: wrap a map of tool handlers so every invocation runs gate.check first.
+ * Works with OpenAI / Anthropic / AI SDK style plain-JSON tool args.
+ */
+export function wrapTools(
+  latch: { store: ProvenanceStore; gate: ProvenanceGate },
+  tools: Record<string, ToolHandler>,
+  opts: WrapToolsOptions = {},
+): Record<string, ToolHandler> {
+  const out: Record<string, ToolHandler> = {};
+  for (const [name, handler] of Object.entries(tools)) {
+    out[name] = async (args) => {
+      try {
+        const plain = latch.gate.check(name, args ?? {});
+        return await handler(plain);
+      } catch (e) {
+        if (e instanceof ProvenanceError && opts.onDenied) {
+          return opts.onDenied(e, name, args ?? {});
+        }
+        throw e;
+      }
+    };
+  }
+  return out;
+}
+
+/**
+ * After a lookup tool returns, seal selected fields so later write tools can
+ * reuse those plain values as tool-grounded.
+ */
+export function sealFields(
+  store: ProvenanceStore,
+  tool: string,
+  callId: string,
+  result: Record<string, unknown>,
+  paths: string[],
+): Record<string, unknown> {
+  const copy = structuredClone(result);
+  for (const path of paths) {
+    const v = getPath(copy, path);
+    if (v === undefined || v === null) continue;
+    const sealed = store.fromTool(v, tool, callId);
+    setPath(copy, path, sealed.value); // keep plain for model; indexed in store
+    void sealed;
+  }
+  return copy;
+}
+
 export function createProvenance() {
   const store = new ProvenanceStore();
   const gate = new ProvenanceGate(store);
@@ -249,3 +368,5 @@ export function createProvenance() {
 
 /** Alias — what you tell a colleague: "just latch it". */
 export const createLatch = createProvenance;
+
+export type Latch = ReturnType<typeof createLatch>;
