@@ -1,0 +1,34 @@
+{
+  "name": "agent-latch-witness",
+  "version": "0.1.0",
+  "description": "Companion to latch: re-validate high-salience memories before they enter the prompt",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
+    "demo": "tsc -p tsconfig.json && node --import tsx demo/run.ts"
+  },
+  "keywords": [
+    "ai-agent",
+    "memory",
+    "staleness",
+    "witness",
+    "latch"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

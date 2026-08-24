@@ -1,0 +1,47 @@
+{
+  "name": "agent-latch",
+  "version": "0.1.0",
+  "description": "Stop AI agents from calling dangerous tools with model-invented arguments",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
+    "demo": "tsc -p tsconfig.build.json && node --import tsx demo/aha.ts",
+    "bench": "tsc -p tsconfig.build.json && node --import tsx demo/bench.ts",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "keywords": [
+    "ai-agent",
+    "provenance",
+    "taint",
+    "tool-use",
+    "safety",
+    "guardrail",
+    "latch"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aarondai23/agent-latch.git"
+  },
+  "homepage": "https://github.com/aarondai23/agent-latch#readme",
+  "bugs": {
+    "url": "https://github.com/aarondai23/agent-latch/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

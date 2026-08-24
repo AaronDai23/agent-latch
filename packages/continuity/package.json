@@ -1,0 +1,33 @@
+{
+  "name": "agent-latch-continuity",
+  "version": "0.1.0",
+  "description": "Companion to latch: propose/commit kernel so only the control plane advances agent state",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
+    "demo": "tsc -p tsconfig.json && node --import tsx demo/run.ts"
+  },
+  "keywords": [
+    "ai-agent",
+    "continuity",
+    "transaction",
+    "latch"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
