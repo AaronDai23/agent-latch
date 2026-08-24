@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   createProvenance,
+  groundFromUserMessage,
+  latchTool,
+  policies,
   ProvenanceError,
   sealFields,
   wrapTools,
@@ -150,4 +153,27 @@ test("audit records allow and deny with path detail", () => {
   assert.equal(summary.deny, 1);
   assert.equal(audit.list({ decision: "deny" })[0]?.paths[0]?.matched, "model");
   assert.match(audit.print(), /1 allow \/ 1 deny/);
+});
+
+test("groundFromUserMessage indexes emails from user text", () => {
+  const { store, gate } = createProvenance();
+  policies(gate, [
+    { tool: "send_email", args: [{ path: "to", allow: ["user"] }] },
+  ]);
+  groundFromUserMessage(store, "Please email Alice@Acme.com thanks", "m1");
+  gate.check("send_email", { to: "alice@acme.com" });
+});
+
+test("latchTool wraps single execute like AI SDK", async () => {
+  const latch = createProvenance();
+  latch.gate.policy({
+    tool: "send_email",
+    args: [{ path: "to", allow: ["user"] }],
+  });
+  latch.store.fromUser("a@b.c", "u1");
+  const execute = latchTool(latch, "send_email", (args) => ({ ok: true, to: args.to }), {
+    onDenied: () => ({ ok: false }),
+  });
+  assert.deepEqual(await execute({ to: "a@b.c" }), { ok: true, to: "a@b.c" });
+  assert.deepEqual(await execute({ to: "x@y.z" }), { ok: false });
 });

@@ -1,6 +1,6 @@
 {
   "name": "agent-latch",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Stop AI agents from calling dangerous tools with model-invented arguments",
   "type": "module",
   "main": "./dist/index.js",

@@ -475,6 +475,48 @@ export function wrapTools(
   return out;
 }
 
+/** Wrap one tool — handy for Vercel AI SDK `tool({ execute })`. */
+export function latchTool(
+  latch: { store: ProvenanceStore; gate: ProvenanceGate; audit?: AuditLog },
+  toolName: string,
+  execute: ToolHandler,
+  opts: WrapToolsOptions = {},
+): ToolHandler {
+  const wrapped = wrapTools(latch, { [toolName]: execute }, opts);
+  const fn = wrapped[toolName];
+  if (!fn) throw new Error(`latchTool: failed to wrap ${toolName}`);
+  return fn;
+}
+
+/**
+ * Register policies for several write tools at once.
+ */
+export function policies(
+  gate: ProvenanceGate,
+  list: ToolPolicy[],
+): ProvenanceGate {
+  for (const p of list) gate.policy(p);
+  return gate;
+}
+
+/**
+ * Index obvious literals from a user message (emails, ids). Call once per turn.
+ * Extend or replace with your own extractor in production.
+ */
+export function groundFromUserMessage(
+  store: ProvenanceStore,
+  message: string,
+  messageId: string,
+): string[] {
+  const grounded: string[] = [];
+  const emailRe = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+  for (const email of message.match(emailRe) ?? []) {
+    store.fromUser(email.toLowerCase(), `${messageId}:email`);
+    grounded.push(email.toLowerCase());
+  }
+  return grounded;
+}
+
 /**
  * After a lookup tool returns, seal selected fields so later write tools can
  * reuse those plain values as tool-grounded.

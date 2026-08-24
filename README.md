@@ -2,142 +2,157 @@
 
 **Stop AI agents from calling dangerous tools with arguments the model invented.**
 
-Most guardrails filter text. Latch seals **values**. If `to`, `accountId`, or `path` did not come from the user or a verified tool, the call does not run.
+[![npm version](https://img.shields.io/npm/v/agent-latch)](https://www.npmjs.com/package/agent-latch)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![tests](https://img.shields.io/badge/tests-23%20passed-brightgreen)](#try-it)
+
+> *Your agent didn't pick the wrong tool — it invented the email.*
+
+Most guardrails filter **text**. Latch seals **values**. If `to`, `accountId`, or `path` did not come from the user or a verified tool, the call does not run.
 
 ```bash
 npm install agent-latch
 ```
 
-## The 5-line drop-in
+## See it in 10 seconds
 
-Tool-calling APIs always pass **plain JSON**. Latch indexes what the user (or a tool) already grounded, then wraps your handlers:
+```bash
+git clone https://github.com/aarondai23/agent-latch && cd agent-latch
+npm install && npm run demo:dropin
+```
+
+```
+WITHOUT latch
+  Mailbox: [ { to: 'board@acme.com', subject: 'Q4 secrets' } ]   ← model invented
+
+WITH latch
+  Invented board@:  { blocked: true }                              ← stopped
+  User-said alice@: { sent: true }                                 ← allowed
+```
+
+**100 invented recipients → 0 escapes** (`npm run bench`)
+
+---
+
+## Vercel AI SDK (copy-paste)
+
+Wrap `tool({ execute })` — the model still sends plain JSON:
+
+```ts
+import { createLatch, groundFromUserMessage, latchTool, policies } from "agent-latch";
+import { generateText, tool } from "ai";
+import { z } from "zod";
+
+const latch = createLatch();
+policies(latch.gate, [
+  { tool: "send_email", args: [{ path: "to", allow: ["user", "tool"] }] },
+]);
+
+await generateText({
+  model: yourModel,
+  prompt: userMessage,
+  tools: {
+    send_email: tool({
+      parameters: z.object({ to: z.string().email(), subject: z.string() }),
+      execute: latchTool(latch, "send_email", sendEmail, {
+        onDenied: (err) => ({ error: "blocked", reason: err.message }),
+      }),
+    }),
+  },
+});
+
+groundFromUserMessage(latch.store, userMessage, messageId); // call before generateText
+console.log(latch.audit.print()); // after
+```
+
+Full guide: [`examples/vercel-ai-sdk`](./examples/vercel-ai-sdk) · `npm run example:ai-sdk`
+
+---
+
+## The 5-line drop-in (any tool loop)
 
 ```ts
 import { createLatch, wrapTools } from "agent-latch";
 
 const latch = createLatch();
-latch.gate.policy({
-  tool: "send_email",
-  args: [{ path: "to", allow: ["user", "tool"] }],
-});
-
-// User said “email alice@acme.com”
+latch.gate.policy({ tool: "send_email", args: [{ path: "to", allow: ["user", "tool"] }] });
 latch.store.fromUser("alice@acme.com", "msg-1");
 
-const tools = wrapTools(latch, {
-  send_email: async (args) => sendEmail(args),
-}, {
+const tools = wrapTools(latch, { send_email: sendEmail }, {
   onDenied: (err) => ({ error: "blocked_ungrounded_args", detail: err.detail }),
 });
 
-await tools.send_email({ to: "alice@acme.com" }); // ✅ same value user said
-await tools.send_email({ to: "board@acme.com" }); // ❌ model invented → blocked
+await tools.send_email({ to: "alice@acme.com" }); // ✅
+await tools.send_email({ to: "board@acme.com" }); // ❌
 ```
 
-Works with OpenAI / Anthropic / Vercel AI SDK style tool maps — no framework lock-in.
+OpenAI · Anthropic · LangGraph · custom loops — same pattern: **`wrapTools` or `latchTool` before execute**.
 
-## Why this pain is real
-
-Agents rarely fail by picking the wrong tool. They fail by **filling the right tool with a hallucinated ID, email, or path**. Text filters do not see that. Latch does.
-
-| Origin | Meaning | Typical allow on write tools |
-|---|---|---|
-| `user` | From an utterance, form, or click | ✅ |
-| `tool` | From a verified tool result | ✅ |
-| `model` | Generated / unknown plain value | ❌ |
-| `derived` | Transform of sealed parents | inherits parents |
-
-**Invariant:** every sensitive argument’s ultimate grounding must be explicitly allowed.
+---
 
 ## Debug & analysis
 
-Every `gate.check` / `wrapTools` call is recorded:
-
 ```ts
-const latch = createLatch();
-
-latch.audit.on((e) => console.log(e.decision, e.tool)); // live
-
-// … run agent …
-
-console.log(latch.audit.print());   // terminal table
-console.log(latch.audit.summary()); // { allow, deny, bypass, byTool }
-latch.audit.list({ decision: "deny" }); // only blocks
+latch.audit.print();                  // terminal table
+latch.audit.summary();                // { allow, deny, bypass, byTool }
+latch.audit.list({ decision: "deny" });
+latch.audit.on((e) => console.log(e)); // live
 ```
-
-Each entry shows: tool, decision, arg path, value, how it matched (`sealed` / `indexed` / `model`), and grounding.
 
 ```bash
 npm run demo:audit
 ```
 
+---
+
+## Why this pain is real
+
+| Origin | Meaning | Write tools |
+|---|---|---|
+| `user` | Utterance / form / click | ✅ |
+| `tool` | Verified tool result | ✅ |
+| `model` | Generated / unknown plain value | ❌ |
+
+**Invariant:** sensitive args must trace to allowed origins. Plain JSON that matches an indexed user/tool value still passes.
+
 ## Honest scope
 
-Latch guarantees: *ungrounded sensitive args cannot execute — if you wrap the tool path.*
-
-It does **not** guarantee: correct CRM data, users approving bad addresses, or safety if you bypass `wrapTools` / `gate.check`.
+✅ Ungrounded sensitive args cannot execute — **if you wrap the tool path**  
+❌ Wrong CRM data, user approving a bad address, bypassing the gate
 
 ## Try it
 
-```bash
-npm install
-npm run demo          # sealed-value aha
-npm run demo:dropin   # plain-JSON tool-call before/after
-npm run bench         # 100 invented emails → 0 escapes
-```
-
-## CRM → send pattern
-
-```ts
-import { createLatch, sealFields, wrapTools } from "agent-latch";
-
-const latch = createLatch();
-latch.gate.policy({
-  tool: "send_email",
-  args: [{ path: "to", allow: ["user", "tool"] }],
-});
-
-const tools = wrapTools(latch, {
-  lookup_email: async (args) => {
-    const row = await crm.find(args.name);
-    // indexes row.email as tool-grounded for later plain JSON reuse
-    return sealFields(latch.store, "lookup_email", "c1", row, ["email"]);
-  },
-  send_email: async (args) => sendEmail(args),
-});
-```
-
-## Evidence
-
-`npm run bench`:
-
-- **without Latch:** 100/100 invented recipients would send  
-- **with Latch:** 0 escapes  
-
-## Companions (later)
-
-| Package | When you need it |
+| Command | What |
 |---|---|
-| [`agent-latch-saga`](./packages/saga) | Multi-step writes leave the world half-broken |
-| [`agent-latch-continuity`](./packages/continuity) | Retries / workers race on agent state |
-| [`agent-latch-witness`](./packages/witness) | Stale high-salience memory poisons the prompt |
+| `npm run demo` | Sealed-value aha |
+| `npm run demo:dropin` | Plain-JSON before/after |
+| `npm run demo:audit` | Why allow/deny |
+| `npm run example:ai-sdk` | Vercel AI SDK pattern |
+| `npm run bench` | 100 → 0 escapes |
+
+## Companions (when the next pain hits)
+
+| Package | When |
+|---|---|
+| [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world |
+| [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state |
+| [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt |
 
 ## API
 
 ```ts
-createLatch() / createProvenance()  // → { store, gate, audit }
-store.fromUser / fromTool / fromModel / derive
-store.lookupGrounded(value)
-gate.policy({ tool, args })
-gate.check(tool, args)
-wrapTools(latch, tools, { onDenied? })
+createLatch() → { store, gate, audit }
+groundFromUserMessage(store, message, id)  // index emails from user text
+policies(gate, ToolPolicy[])
+latchTool(latch, name, execute, opts?)     // single tool / AI SDK
+wrapTools(latch, tools, opts?)             // tool map
 sealFields(store, tool, callId, result, paths)
-audit.print() / summary() / list() / on(listener)
+audit.print() / summary() / list() / on()
 ```
 
-## Status
+## Launch / share
 
-v0.1.x — MIT, tested. A hard gate, not an AgentOps platform.
+See [`SHARE.md`](./SHARE.md) for tweet / HN templates.
 
 ## License
 
