@@ -1,0 +1,50 @@
+{
+  "name": "agent-outcome",
+  "version": "0.1.0",
+  "description": "HTTP 200 is not proof the email sent — verify agent tool outcomes, not just responses",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
+    "demo": "tsc -p tsconfig.build.json && node --import tsx demo/run.ts",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "keywords": [
+    "ai-agent",
+    "tool-use",
+    "verification",
+    "receipt",
+    "reconciliation",
+    "side-effects",
+    "reliability"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AaronDai23/agent-latch.git",
+    "directory": "packages/receipt"
+  },
+  "homepage": "https://github.com/AaronDai23/agent-latch/tree/main/packages/receipt#readme",
+  "bugs": {
+    "url": "https://github.com/AaronDai23/agent-latch/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

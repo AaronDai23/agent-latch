@@ -128,9 +128,15 @@ npm run demo:audit
 
 | Package | When |
 |---|---|
+| [`agent-outcome`](./packages/receipt) | Tool returned success but the side effect never happened |
 | [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world |
 | [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state |
 | [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt |
+
+```bash
+npm run demo:receipt      # fake SMTP success rejected
+npm run example:receipt   # latch + receipt together
+```
 
 ## API
 
