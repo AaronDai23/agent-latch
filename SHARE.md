@@ -52,16 +52,13 @@ npm run bench          # 100 → 0
 
 ## Screenshot text (terminal)
 
-Run `npm run demo:dropin` and capture:
+Run `npm run demo:screenshot` — or use the committed asset:
 
-```
-WITHOUT latch
-Mailbox: [ { to: 'board@acme.com', ... } ]
+**File:** [`docs/demo-screenshot.png`](./docs/demo-screenshot.png)
 
-WITH latch
-Invented board@: { blocked: true, ... }
-User-said alice@: { sent: true, ... }
-```
+Embed in README / tweets / release. Crop npm command lines if posting publicly.
+
+Ready-to-post copy: [`TWEET.md`](./TWEET.md)
 
 ## Who to send it to first
 

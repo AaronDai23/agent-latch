@@ -14,29 +14,13 @@ Most guardrails filter **text**. Latch seals **values**. If `to`, `accountId`, o
 npm install agent-latch
 ```
 
+![agent-latch demo: invented recipient blocked, user-grounded email allowed](./docs/demo-screenshot.png)
+
 ## See it in 10 seconds
 
 ```bash
 git clone https://github.com/aarondai23/agent-latch && cd agent-latch
 npm install && npm run demo:screenshot
-```
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ WITHOUT latch                                            │
-├──────────────────────────────────────────────────────────┤
-│ Model tool call:                                         │
-│   send_email({ to: "board@acme.com" })                   │
-│ Result:  ✗ SENT (invented recipient)                     │
-│ Mailbox: board@acme.com  ← leaked                        │
-└──────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────┐
-│ WITH agent-latch                                         │
-├──────────────────────────────────────────────────────────┤
-│ Model tool call #1:  board@acme.com  → BLOCKED ✓         │
-│ Model tool call #2:  alice@acme.com  → ALLOWED ✓         │
-└──────────────────────────────────────────────────────────┘
 ```
 
 **100 invented recipients → 0 escapes** (`npm run bench`)
@@ -162,7 +146,9 @@ audit.print() / summary() / list() / on()
 
 ## Launch / share
 
-See [`SHARE.md`](./SHARE.md) for tweet / HN templates.
+- Screenshot: [`docs/demo-screenshot.png`](./docs/demo-screenshot.png)
+- Copy-paste posts: [`TWEET.md`](./TWEET.md)
+- HN / templates: [`SHARE.md`](./SHARE.md)
 
 ## License
 

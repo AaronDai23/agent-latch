@@ -26,7 +26,7 @@ npm run demo:screenshot
 
 Recommended: record terminal at 80×24 cols, dark theme, font JetBrains Mono / SF Mono.
 
-Suggested filename: `docs/screenshot-demo.png`
+Suggested filename: `docs/demo-screenshot.png` (committed in repo)
 
 ## Attach to release (optional)
 
