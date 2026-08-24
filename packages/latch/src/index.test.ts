@@ -133,3 +133,21 @@ test("sealFields indexes CRM email for later send", () => {
   const plain = gate.check("send_email", { to: "bob@acme.com" });
   assert.equal(plain.to, "bob@acme.com");
 });
+
+test("audit records allow and deny with path detail", () => {
+  const { store, gate, audit } = createProvenance();
+  gate.policy({
+    tool: "send_email",
+    args: [{ path: "to", allow: ["user", "tool"] }],
+  });
+  store.fromUser("alice@acme.com", "u1");
+
+  gate.check("send_email", { to: "alice@acme.com" });
+  assert.throws(() => gate.check("send_email", { to: "evil@x.com" }));
+
+  const summary = audit.summary();
+  assert.equal(summary.allow, 1);
+  assert.equal(summary.deny, 1);
+  assert.equal(audit.list({ decision: "deny" })[0]?.paths[0]?.matched, "model");
+  assert.match(audit.print(), /1 allow \/ 1 deny/);
+});

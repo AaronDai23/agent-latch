@@ -49,6 +49,28 @@ Agents rarely fail by picking the wrong tool. They fail by **filling the right t
 
 **Invariant:** every sensitive argument’s ultimate grounding must be explicitly allowed.
 
+## Debug & analysis
+
+Every `gate.check` / `wrapTools` call is recorded:
+
+```ts
+const latch = createLatch();
+
+latch.audit.on((e) => console.log(e.decision, e.tool)); // live
+
+// … run agent …
+
+console.log(latch.audit.print());   // terminal table
+console.log(latch.audit.summary()); // { allow, deny, bypass, byTool }
+latch.audit.list({ decision: "deny" }); // only blocks
+```
+
+Each entry shows: tool, decision, arg path, value, how it matched (`sealed` / `indexed` / `model`), and grounding.
+
+```bash
+npm run demo:audit
+```
+
 ## Honest scope
 
 Latch guarantees: *ungrounded sensitive args cannot execute — if you wrap the tool path.*
@@ -103,13 +125,14 @@ const tools = wrapTools(latch, {
 ## API
 
 ```ts
-createLatch() / createProvenance()
+createLatch() / createProvenance()  // → { store, gate, audit }
 store.fromUser / fromTool / fromModel / derive
 store.lookupGrounded(value)
 gate.policy({ tool, args })
 gate.check(tool, args)
 wrapTools(latch, tools, { onDenied? })
 sealFields(store, tool, callId, result, paths)
+audit.print() / summary() / list() / on(listener)
 ```
 
 ## Status

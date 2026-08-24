@@ -49,6 +49,98 @@ export class ProvenanceError extends Error {
   }
 }
 
+export type AuditDecision = "allow" | "deny" | "bypass";
+
+export interface AuditPathDetail {
+  path: string;
+  value: unknown;
+  grounding: SourceKind[];
+  allow: SourceKind[];
+  matched: "sealed" | "indexed" | "model";
+  ok: boolean;
+}
+
+export interface AuditEntry {
+  id: string;
+  ts: number;
+  tool: string;
+  decision: AuditDecision;
+  args: Record<string, unknown>;
+  paths: AuditPathDetail[];
+  reason?: string;
+}
+
+export interface AuditSummary {
+  total: number;
+  allow: number;
+  deny: number;
+  bypass: number;
+  byTool: Record<string, { allow: number; deny: number; bypass: number }>;
+}
+
+/** In-memory decision log for debugging blocked / allowed tool calls. */
+export class AuditLog {
+  private readonly entries: AuditEntry[] = [];
+  private listener?: (entry: AuditEntry) => void;
+
+  on(listener: (entry: AuditEntry) => void): this {
+    this.listener = listener;
+    return this;
+  }
+
+  record(entry: Omit<AuditEntry, "id" | "ts"> & { id?: string; ts?: number }): AuditEntry {
+    const full: AuditEntry = {
+      ...entry,
+      id: entry.id ?? uid(),
+      ts: entry.ts ?? Date.now(),
+    };
+    this.entries.push(full);
+    this.listener?.(full);
+    return full;
+  }
+
+  list(filter?: { tool?: string; decision?: AuditDecision }): AuditEntry[] {
+    return this.entries.filter((e) => {
+      if (filter?.tool && e.tool !== filter.tool) return false;
+      if (filter?.decision && e.decision !== filter.decision) return false;
+      return true;
+    });
+  }
+
+  summary(): AuditSummary {
+    const byTool: AuditSummary["byTool"] = {};
+    const out: AuditSummary = { total: 0, allow: 0, deny: 0, bypass: 0, byTool };
+    for (const e of this.entries) {
+      out.total++;
+      out[e.decision]++;
+      const slot = (byTool[e.tool] ??= { allow: 0, deny: 0, bypass: 0 });
+      slot[e.decision]++;
+    }
+    return out;
+  }
+
+  clear(): void {
+    this.entries.length = 0;
+  }
+
+  /** Human-readable table for terminal debugging. */
+  print(filter?: { tool?: string; decision?: AuditDecision }): string {
+    const rows = this.list(filter);
+    const lines = rows.map((e) => {
+      const paths = e.paths
+        .map(
+          (p) =>
+            `${p.path}=${JSON.stringify(p.value)} [${p.matched}/${p.grounding.join("+")}|${p.ok ? "ok" : "NO"}]`,
+        )
+        .join("; ");
+      return `${new Date(e.ts).toISOString()}  ${e.decision.padEnd(6)}  ${e.tool.padEnd(16)}  ${paths || e.reason || ""}`;
+    });
+    const s = this.summary();
+    const header = `latch audit: ${s.allow} allow / ${s.deny} deny / ${s.bypass} bypass (total ${s.total})`;
+    return [header, ...lines].join("\n");
+  }
+}
+
 function uid(): string {
   return `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -222,70 +314,115 @@ export class ProvenanceStore {
 export class ProvenanceGate {
   private readonly policies = new Map<string, ToolPolicy>();
 
-  constructor(private readonly store: ProvenanceStore) {}
+  constructor(
+    private readonly store: ProvenanceStore,
+    readonly audit: AuditLog = new AuditLog(),
+  ) {}
 
   policy(toolPolicy: ToolPolicy): this {
     this.policies.set(toolPolicy.tool, toolPolicy);
     return this;
   }
 
-  /**
-   * Validate args. Returns plain unwrapped args if ok.
-   * Throws ProvenanceError if any sensitive path fails.
-   */
   /** True if this tool has a registered policy (write tools should). */
   hasPolicy(tool: string): boolean {
     return this.policies.has(tool);
   }
 
+  /**
+   * Validate args. Returns plain unwrapped args if ok.
+   * Throws ProvenanceError if any sensitive path fails.
+   */
   check(tool: string, args: Record<string, unknown>): Record<string, unknown> {
     const policy = this.policies.get(tool);
     // No policy → pass-through (only declare policies on mutating / sensitive tools)
     if (!policy) {
+      this.audit.record({
+        tool,
+        decision: "bypass",
+        args,
+        paths: [],
+        reason: "no policy",
+      });
       return unwrapDeep(args, this.store) as Record<string, unknown>;
     }
+
+    const pathDetails: AuditPathDetail[] = [];
 
     for (const rule of policy.args) {
       const raw = getPath(args, rule.path);
       const allowed = asAllow(rule.allow);
 
       if (raw === undefined || raw === null) {
-        throw new ProvenanceError(`Missing required arg path: ${rule.path}`, {
+        const reason = `Missing required arg path: ${rule.path}`;
+        this.audit.record({
+          tool,
+          decision: "deny",
+          args,
+          paths: pathDetails,
+          reason,
+        });
+        throw new ProvenanceError(reason, {
           tool,
           path: rule.path,
         });
       }
 
       let sealed: Sealed;
+      let matched: AuditPathDetail["matched"];
       if (isSealed(raw)) {
         sealed = raw;
+        matched = "sealed";
       } else {
         const hit = this.store.lookupGrounded(raw);
         if (hit) {
           sealed = hit;
+          matched = "indexed";
         } else {
           sealed = this.store.fromModel(raw, "unsealed plain value");
+          matched = "model";
         }
       }
 
       const grounding = this.store.grounding(sealed);
       const denied = [...grounding].filter((k) => !allowed.has(k));
-      if (!grounding.size || denied.length) {
-        throw new ProvenanceError(
-          `Provenance denied for ${tool}.${rule.path}: grounding=[${[...grounding].join(",")}] allow=[${[...allowed].join(",")}]`,
-          {
-            tool,
-            path: rule.path,
-            grounding: [...grounding],
-            allow: [...allowed],
-            denied,
-            source: sealed.source,
-            value: sealed.value,
-          },
-        );
+      const ok = grounding.size > 0 && denied.length === 0;
+      pathDetails.push({
+        path: rule.path,
+        value: sealed.value,
+        grounding: [...grounding],
+        allow: [...allowed],
+        matched,
+        ok,
+      });
+
+      if (!ok) {
+        const reason = `Provenance denied for ${tool}.${rule.path}: grounding=[${[...grounding].join(",")}] allow=[${[...allowed].join(",")}]`;
+        this.audit.record({
+          tool,
+          decision: "deny",
+          args,
+          paths: pathDetails,
+          reason,
+        });
+        throw new ProvenanceError(reason, {
+          tool,
+          path: rule.path,
+          grounding: [...grounding],
+          allow: [...allowed],
+          denied,
+          source: sealed.source,
+          value: sealed.value,
+        });
       }
     }
 
+    this.audit.record({
+      tool,
+      decision: "allow",
+      args,
+      paths: pathDetails,
+    });
     return unwrapDeep(args, this.store) as Record<string, unknown>;
   }
 }
@@ -317,7 +454,7 @@ export interface WrapToolsOptions {
  * Works with OpenAI / Anthropic / AI SDK style plain-JSON tool args.
  */
 export function wrapTools(
-  latch: { store: ProvenanceStore; gate: ProvenanceGate },
+  latch: { store: ProvenanceStore; gate: ProvenanceGate; audit?: AuditLog },
   tools: Record<string, ToolHandler>,
   opts: WrapToolsOptions = {},
 ): Record<string, ToolHandler> {
@@ -362,8 +499,9 @@ export function sealFields(
 
 export function createProvenance() {
   const store = new ProvenanceStore();
-  const gate = new ProvenanceGate(store);
-  return { store, gate };
+  const audit = new AuditLog();
+  const gate = new ProvenanceGate(store, audit);
+  return { store, gate, audit };
 }
 
 /** Alias — what you tell a colleague: "just latch it". */
