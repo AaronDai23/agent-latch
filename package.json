@@ -19,8 +19,8 @@
     "example:receipt": "node --import tsx examples/latch-plus-receipt/agent.ts",
     "demo:all": "npm run demo -w agent-latch && npm run demo:dropin -w agent-latch && npm run demo:audit -w agent-latch && npm run demo:receipt && npm run example:ai-sdk && npm run example:receipt && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
     "bench": "npm run bench -w agent-latch",
-    "publish:hero": "npm publish -w agent-latch --access public",
-    "publish:receipt": "npm publish -w agent-outcome --access public",
+    "publish:hero": "npm run build -w agent-latch && npm publish --workspace=agent-latch --access public",
+    "publish:receipt": "npm run build -w agent-outcome && npm publish --workspace=agent-outcome --access public",
     "typecheck": "npm run build"
   },
   "engines": {

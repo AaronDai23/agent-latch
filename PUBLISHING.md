@@ -16,20 +16,27 @@ npm login              # use your npmjs.com account
 npm whoami             # should print your username
 ```
 
-## 3. Publish hero package
+## 3. Publish outcome package
 
 ```bash
-npm test
-npm run build
-npm publish --dry-run -w agent-latch   # verify tarball (no test files after prepublishOnly)
-npm run publish:hero                   # publishes agent-latch@0.1.0
+npm run publish:receipt
 ```
+
+Or from the package directory (most reliable):
+
+```bash
+cd packages/receipt
+npm test && npm run build
+npm publish --access public
+```
+
+Do **not** append shell comments on the same line — `# ...` can break npm.
 
 ## 4. Verify
 
 ```bash
+npm view agent-outcome
 npm view agent-latch
-npx agent-latch  # after adding bin, optional
 ```
 
 ## Notes
