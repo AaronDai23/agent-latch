@@ -1,46 +1,74 @@
 # Publish checklist
 
-## 1. GitHub (one-time)
+## 1. npm (one-time)
 
 ```bash
-gh auth login          # choose GitHub.com → HTTPS → Login with browser
-gh repo create agent-latch --public --source=. --remote=origin --push
+npm login
+npm whoami   # should print aarondai23
 ```
 
-If the repo name is taken, use `agent-latch-ai` and update `packages/latch/package.json` repository URLs.
+## 2. Commit & push first
 
-## 2. npm (one-time)
+Publish from a clean, pushed `main` so GitHub links in the package match the code.
 
 ```bash
-npm login              # use your npmjs.com account
-npm whoami             # should print your username
+git add packages/budget packages/approval examples/latch-approval-budget package.json package-lock.json README.md README.zh-CN.md
+git commit -m "Add agent-latch-budget and agent-latch-approval companions."
+git push origin main
 ```
 
-## 3. Publish outcome package
+## 3. Publish budget + approval
+
+**Do not** put `# comments` on the same line as the publish command.
 
 ```bash
-npm run publish:receipt
+npm test
+npm run publish:budget
+npm run publish:approval
 ```
 
-Or from the package directory (most reliable):
+Or from each package (most reliable):
 
 ```bash
-cd packages/receipt
+cd packages/budget
+npm test && npm run build
+npm publish --access public
+
+cd ../approval
 npm test && npm run build
 npm publish --access public
 ```
 
-Do **not** append shell comments on the same line — `# ...` can break npm.
-
-## 4. Verify
+If npm asks for 2FA:
 
 ```bash
-npm view agent-outcome
+npm publish --access public --otp=123456
+```
+
+## 4. Already published
+
+```bash
+npm run publish:hero      # agent-latch
+npm run publish:receipt   # agent-outcome
+```
+
+## 5. Verify
+
+```bash
+npm view agent-latch-budget
+npm view agent-latch-approval
 npm view agent-latch
+npm view agent-outcome
+```
+
+Install:
+
+```bash
+npm install agent-latch-budget agent-latch-approval
 ```
 
 ## Notes
 
-- npm name **`latch`** is taken (unrelated encoding package). We publish as **`agent-latch`**.
-- Brand stays **Latch** in docs; install command is `npm install agent-latch`.
-- Companions (`agent-latch-saga`, etc.) can ship in v0.2 once hero gets traction.
+- npm name **`latch`** is taken. Hero package is **`agent-latch`**.
+- Companions ship as `agent-latch-*` (or `agent-outcome` for receipts).
+- `prepublishOnly` runs tests + build before each publish.

@@ -1,0 +1,45 @@
+{
+  "name": "agent-latch-budget",
+  "version": "0.1.0",
+  "description": "Companion to latch: stop runaway agent spend — token, tool-call, and money budgets",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
+    "demo": "tsc -p tsconfig.json && node --import tsx demo/run.ts",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "keywords": [
+    "ai-agent",
+    "budget",
+    "rate-limit",
+    "cost-control",
+    "tool-use",
+    "latch"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AaronDai23/agent-latch.git",
+    "directory": "packages/budget"
+  },
+  "homepage": "https://github.com/AaronDai23/agent-latch/tree/main/packages/budget#readme",
+  "bugs": {
+    "url": "https://github.com/AaronDai23/agent-latch/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
