@@ -64,7 +64,7 @@ const tools = wrapTools(
   },
 );
 
-console.log("=== latch + receipt ===\n");
+console.log("=== latch + outcome ===\n");
 
 const userMsg = "Please email alice@acme.com about launch";
 groundFromUserMessage(latch.store, userMsg, "msg-1");

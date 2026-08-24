@@ -28,7 +28,7 @@ console.log("Tool returned:", fake);
 console.log("Agent thinks: email sent ✓");
 console.log("SMTP accepted:", [...smtp.accepted]); // empty — silent failure
 
-console.log("\n=== WITH agent-receipt ===\n");
+console.log("\n=== WITH agent-outcome ===\n");
 
 const receipt = createReceipt([
   {
