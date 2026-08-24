@@ -101,3 +101,35 @@ Try it: https://github.com/aarondai23/agent-latch
 ## GitHub Release
 
 Attach `docs/demo-screenshot.png` as release asset when creating v0.1.3.
+
+---
+
+## agent-outcome launch (English)
+
+```
+HTTP 200 is not proof the email sent.
+
+agent-outcome: after a mutating tool runs, extract an artifact (message id, charge id) and verify it against your world. Fake SMTP success → rejected. Only confirmed side effects return data to the model.
+
+Pairs with agent-latch (provenance gate).
+
+npm install agent-outcome
+https://www.npmjs.com/package/agent-outcome
+```
+
+**Demo:** `npm run example:receipt` — invented args blocked, fake success rejected, real delivery passes.
+
+---
+
+## agent-outcome launch (中文)
+
+```
+工具返回 200 ≠ 副作用真的发生了。
+
+agent-outcome：mutating tool 执行后提取 artifact（messageId、chargeId），对照真实世界校验。假 SMTP 成功会被拒；只有确认落地的副作用才把 data 还给模型。
+
+和 agent-latch（参数血统）搭配用。
+
+npm install agent-outcome
+https://www.npmjs.com/package/agent-outcome
+```

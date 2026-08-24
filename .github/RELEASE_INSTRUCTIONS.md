@@ -1,4 +1,20 @@
-# Create GitHub Release v0.1.3
+# Create GitHub Release
+
+## agent-outcome v0.1.0
+
+After `npm run publish:receipt` succeeds:
+
+```bash
+git push origin main
+git tag agent-outcome-v0.1.0
+git push origin agent-outcome-v0.1.0
+
+gh release create agent-outcome-v0.1.0 \
+  --title "agent-outcome v0.1.0 — Verify tool side effects, not HTTP 200" \
+  --notes-file .github/RELEASE_agent-outcome_v0.1.0.md
+```
+
+## agent-latch v0.1.3
 
 After npm publish succeeds:
 

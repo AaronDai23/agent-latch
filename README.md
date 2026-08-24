@@ -2,9 +2,10 @@
 
 **Stop AI agents from calling dangerous tools with arguments the model invented.**
 
-[![npm version](https://img.shields.io/npm/v/agent-latch)](https://www.npmjs.com/package/agent-latch)
+[![npm: agent-latch](https://img.shields.io/npm/v/agent-latch?label=agent-latch)](https://www.npmjs.com/package/agent-latch)
+[![npm: agent-outcome](https://img.shields.io/npm/v/agent-outcome?label=agent-outcome)](https://www.npmjs.com/package/agent-outcome)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![tests](https://img.shields.io/badge/tests-23%20passed-brightgreen)](#try-it)
+[![tests](https://img.shields.io/badge/tests-31%20passed-brightgreen)](#try-it)
 
 > *Your agent didn't pick the wrong tool — it invented the email.*
 
@@ -124,19 +125,37 @@ npm run demo:audit
 | `npm run example:ai-sdk` | Vercel AI SDK pattern |
 | `npm run bench` | 100 → 0 escapes |
 
-## Companions (when the next pain hits)
+## agent-outcome — verify side effects, not HTTP 200
+
+Tool handlers can return `{ sent: true }` while nothing left SMTP. **agent-outcome** extracts an artifact (message id, charge id, row version) and verifies it against your world.
+
+```bash
+npm install agent-outcome
+```
+
+```ts
+import { artifacts, createReceipt, wrapReceipt } from "agent-outcome";
+
+const receipt = createReceipt([
+  {
+    tool: "send_email",
+    artifact: artifacts.field("messageId"),
+    verify: ({ artifact }) => delivered.has(artifact),
+  },
+]);
+```
+
+Full guide: [`packages/receipt`](./packages/receipt) · `npm run demo:receipt` · `npm run example:receipt` (with latch)
+
+---
+
+## More companions (monorepo, not on npm yet)
 
 | Package | When |
 |---|---|
-| [`agent-outcome`](./packages/receipt) | Tool returned success but the side effect never happened |
 | [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world |
 | [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state |
 | [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt |
-
-```bash
-npm run demo:receipt      # fake SMTP success rejected
-npm run example:receipt   # latch + receipt together
-```
 
 ## API
 
