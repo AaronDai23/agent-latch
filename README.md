@@ -14,7 +14,7 @@ Most guardrails filter **text**. Latch seals **values**. If `to`, `accountId`, o
 npm install agent-latch
 ```
 
-![agent-latch demo: invented recipient blocked, user-grounded email allowed](./docs/demo-screenshot.png)
+![agent-latch demo: invented recipient blocked, user-grounded email allowed](https://raw.githubusercontent.com/AaronDai23/agent-latch/main/docs/demo-screenshot.png)
 
 ## See it in 10 seconds
 
