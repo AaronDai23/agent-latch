@@ -2,14 +2,14 @@
   "name": "latch",
   "private": true,
   "version": "0.1.0",
-  "description": "Hard latches for AI agents — provenance, receipts, budget, approval, saga, continuity, witness",
+  "description": "Hard latches for AI agents — provenance, receipts, budget, approval, idempotency, saga, continuity, witness",
   "type": "module",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w agent-latch -w agent-outcome -w agent-latch-budget -w agent-latch-approval -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
-    "test": "npm run test -w agent-latch -w agent-outcome -w agent-latch-budget -w agent-latch-approval -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
+    "build": "npm run build -w agent-latch -w agent-outcome -w agent-latch-budget -w agent-latch-approval -w agent-latch-idempotency -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
+    "test": "npm run test -w agent-latch -w agent-outcome -w agent-latch-budget -w agent-latch-approval -w agent-latch-idempotency -w agent-latch-saga -w agent-latch-continuity -w agent-latch-witness",
     "demo": "npm run demo -w agent-latch",
     "demo:dropin": "npm run demo:dropin -w agent-latch",
     "demo:screenshot": "npm run demo:screenshot -w agent-latch",
@@ -17,15 +17,17 @@
     "demo:receipt": "npm run demo -w agent-outcome",
     "demo:budget": "npm run demo -w agent-latch-budget",
     "demo:approval": "npm run demo -w agent-latch-approval",
+    "demo:idempotency": "npm run demo -w agent-latch-idempotency",
     "example:ai-sdk": "node --import tsx examples/vercel-ai-sdk/agent.ts",
     "example:receipt": "node --import tsx examples/latch-plus-receipt/agent.ts",
     "example:gates": "node --import tsx examples/latch-approval-budget/agent.ts",
-    "demo:all": "npm run demo -w agent-latch && npm run demo:dropin -w agent-latch && npm run demo:audit -w agent-latch && npm run demo:receipt && npm run demo:budget && npm run demo:approval && npm run example:ai-sdk && npm run example:receipt && npm run example:gates && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
+    "demo:all": "npm run demo -w agent-latch && npm run demo:dropin -w agent-latch && npm run demo:audit -w agent-latch && npm run demo:receipt && npm run demo:budget && npm run demo:approval && npm run demo:idempotency && npm run example:ai-sdk && npm run example:receipt && npm run example:gates && npm run demo -w agent-latch-saga && npm run demo -w agent-latch-continuity && npm run demo -w agent-latch-witness",
     "bench": "npm run bench -w agent-latch",
     "publish:hero": "npm run build -w agent-latch && npm publish --workspace=agent-latch --access public",
     "publish:receipt": "npm run build -w agent-outcome && npm publish --workspace=agent-outcome --access public",
     "publish:budget": "npm run build -w agent-latch-budget && npm publish --workspace=agent-latch-budget --access public",
     "publish:approval": "npm run build -w agent-latch-approval && npm publish --workspace=agent-latch-approval --access public",
+    "publish:idempotency": "npm run build -w agent-latch-idempotency && npm publish --workspace=agent-latch-idempotency --access public",
     "typecheck": "npm run build"
   },
   "engines": {

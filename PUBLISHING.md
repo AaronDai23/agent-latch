@@ -72,3 +72,9 @@ npm install agent-latch-budget agent-latch-approval
 - npm name **`latch`** is taken. Hero package is **`agent-latch`**.
 - Companions ship as `agent-latch-*` (or `agent-outcome` for receipts).
 - `prepublishOnly` runs tests + build before each publish.
+
+## Publish idempotency
+
+```bash
+npm run publish:idempotency
+```

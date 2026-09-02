@@ -155,6 +155,7 @@ Full guide: [`packages/receipt`](./packages/receipt) Â· `npm run demo:receipt` Â
 |---|---|
 | [`agent-latch-budget`](./packages/budget) | Runaway loops burn tokens / money / tool calls |
 | [`agent-latch-approval`](./packages/approval) | Human approved one payload; agent executes another |
+| [`agent-latch-idempotency`](./packages/idempotency) | Agent retries double-charge or double-send |
 | [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world |
 | [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state |
 | [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt |
@@ -162,6 +163,7 @@ Full guide: [`packages/receipt`](./packages/receipt) Â· `npm run demo:receipt` Â
 ```bash
 npm run demo:budget
 npm run demo:approval
+npm run demo:idempotency
 npm run example:gates   # latch + approval + budget stacked
 ```
 

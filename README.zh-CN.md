@@ -12,10 +12,11 @@ npm run example:receipt   # latch + outcome 联调
 npm run bench -w agent-latch
 ```
 
-Companion（未上 npm）：`agent-latch-budget` / `agent-latch-approval` / `agent-latch-saga` / `agent-latch-continuity` / `agent-latch-witness`
+Companion（未上 npm）：`agent-latch-budget` / `agent-latch-approval` / `agent-latch-idempotency` / `agent-latch-saga` / `agent-latch-continuity` / `agent-latch-witness`
 
 ```bash
 npm run demo:budget
 npm run demo:approval
+npm run demo:idempotency
 npm run example:gates
 ```
