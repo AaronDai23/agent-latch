@@ -183,7 +183,6 @@ audit.print() / summary() / list() / on()
 ## Launch / share
 
 - Screenshot: [`docs/demo-screenshot.png`](./docs/demo-screenshot.png)
-- Positioning / can-cannot promise: [`COMMERCIAL.md`](./COMMERCIAL.md)
 - Gate stacking: [`docs/COMPOSE.md`](./docs/COMPOSE.md)
 
 ## License
