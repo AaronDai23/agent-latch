@@ -68,7 +68,7 @@ const tools = wrapTools(latch, { send_email: sendEmail }, {
 | `npm run bench` | 100 invented emails → **0 escapes** |
 
 ### Docs
-- [`SHARE.md`](./SHARE.md) — tweet / HN launch copy
+- [`COMMERCIAL.md`](./COMMERCIAL.md) — positioning / can-cannot promise
 - [`examples/vercel-ai-sdk/README.md`](./examples/vercel-ai-sdk/README.md) — copy-paste integration
 
 ---

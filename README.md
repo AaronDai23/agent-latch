@@ -183,8 +183,8 @@ audit.print() / summary() / list() / on()
 ## Launch / share
 
 - Screenshot: [`docs/demo-screenshot.png`](./docs/demo-screenshot.png)
-- Copy-paste posts: [`TWEET.md`](./TWEET.md)
-- HN / templates: [`SHARE.md`](./SHARE.md)
+- Positioning / can-cannot promise: [`COMMERCIAL.md`](./COMMERCIAL.md)
+- Gate stacking: [`docs/COMPOSE.md`](./docs/COMPOSE.md)
 
 ## License
 
