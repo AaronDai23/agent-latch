@@ -12,11 +12,16 @@ npm run example:receipt   # latch + outcome 联调
 npm run bench -w agent-latch
 ```
 
-Companion（未上 npm）：`agent-latch-budget` / `agent-latch-approval` / `agent-latch-idempotency` / `agent-latch-saga` / `agent-latch-continuity` / `agent-latch-witness`
+Companion：`budget` / `approval` / `idempotency` / `saga` / `continuity` / `witness`
+
+写工具闸门叠放顺序见 [`docs/COMPOSE.md`](./docs/COMPOSE.md)。
 
 ```bash
 npm run demo:budget
 npm run demo:approval
 npm run demo:idempotency
-npm run example:gates
+npm run demo:saga
+npm run example:gates       # latch + approval + budget
+npm run example:compose     # 五闸门全栈
+npm run example:langgraph   # checkpoint 重派发防双花
 ```

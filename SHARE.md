@@ -60,6 +60,10 @@ Embed in README / tweets / release. Crop npm command lines if posting publicly.
 
 Ready-to-post copy: [`TWEET.md`](./TWEET.md)
 
+## Sales & positioning
+
+External messaging — what we **can / cannot** promise: [`COMMERCIAL.md#对外话术能承诺--不能承诺`](./COMMERCIAL.md#对外话术能承诺--不能承诺)
+
 ## Who to send it to first
 
 - Teams shipping agent write tools (email, CRM, billing, file delete)

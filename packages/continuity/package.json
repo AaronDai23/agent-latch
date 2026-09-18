@@ -18,15 +18,26 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "tsc -p tsconfig.json && node --test dist/*.test.js",
-    "demo": "tsc -p tsconfig.json && node --import tsx demo/run.ts"
+    "demo": "tsc -p tsconfig.json && node --import tsx demo/run.ts",
+    "prepublishOnly": "npm test && npm run build"
   },
   "keywords": [
     "ai-agent",
     "continuity",
-    "transaction",
+    "checkpoint",
+    "control-plane",
     "latch"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AaronDai23/agent-latch.git",
+    "directory": "packages/continuity"
+  },
+  "homepage": "https://github.com/AaronDai23/agent-latch/tree/main/packages/continuity#readme",
+  "bugs": {
+    "url": "https://github.com/AaronDai23/agent-latch/issues"
+  },
   "engines": {
     "node": ">=20"
   }

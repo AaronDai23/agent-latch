@@ -47,10 +47,10 @@ const idem = createIdempotency({
 
 | State | Meaning | Retry behavior |
 |---|---|---|
-| `pending` + valid lease | Another worker executing | **Deny** (inflight) |
+| `pending` / `unknown` + valid lease | Executing (any worker, including same process) | **Deny** (inflight) |
 | `committed` | Receipt known | **Replay** |
 | `failed` | Side effect known not started | Retry with **same key** |
-| `unknown` / expired `pending` | Crash window | **Reconcile only** — never blind re-exec |
+| lease expired `pending` / `unknown` | Crash window | **Reconcile only** — never blind re-exec |
 
 Reconcile outcomes:
 - `committed` → local commit + replay

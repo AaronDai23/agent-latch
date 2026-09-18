@@ -119,3 +119,33 @@ test("ahead-of-log writes intent before execute", async () => {
   assert.equal(sawIntent, true);
   assert.equal(log.records[0]?.status, "done");
 });
+
+test("FileEffectLog survives process restart semantics", async () => {
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const { FileEffectLog, createSaga } = await import("./index.js");
+
+  const dir = mkdtempSync(join(tmpdir(), "latch-saga-"));
+  const path = join(dir, "effects.json");
+  try {
+    const log1 = new FileEffectLog(path);
+    const saga1 = createSaga(log1);
+    saga1.register({
+      name: "charge",
+      reversibility: "compensatable",
+      execute: () => ({ chargeId: "ch_1" }),
+      compensate: () => {},
+    });
+    await saga1.run(async (tx) => {
+      await tx.call("charge", { amount: 5 });
+    });
+
+    const log2 = new FileEffectLog(path);
+    assert.equal(log2.records.length, 1);
+    assert.equal(log2.records[0]?.status, "done");
+    assert.equal(log2.records[0]?.tool, "charge");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

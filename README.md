@@ -149,22 +149,23 @@ Full guide: [`packages/receipt`](./packages/receipt) · `npm run demo:receipt` �
 
 ---
 
-## More companions (monorepo, not on npm yet)
+## More companions
 
-| Package | When |
-|---|---|
-| [`agent-latch-budget`](./packages/budget) | Runaway loops burn tokens / money / tool calls |
-| [`agent-latch-approval`](./packages/approval) | Human approved one payload; agent executes another |
-| [`agent-latch-idempotency`](./packages/idempotency) | Agent retries double-charge or double-send |
-| [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world |
-| [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state |
-| [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt |
+Stacking order for write tools: [`docs/COMPOSE.md`](./docs/COMPOSE.md)
+
+| Package | When | Command |
+|---|---|---|
+| [`agent-latch-budget`](./packages/budget) | Runaway loops burn tokens / money / tool calls | `npm run demo:budget` |
+| [`agent-latch-approval`](./packages/approval) | Human approved one payload; agent executes another | `npm run demo:approval` |
+| [`agent-latch-idempotency`](./packages/idempotency) | Agent / LangGraph retries double-charge | `npm run demo:idempotency` · `npm run example:langgraph` |
+| [`agent-latch-saga`](./packages/saga) | Multi-step writes half-break the world | `npm run demo:saga` |
+| [`agent-latch-continuity`](./packages/continuity) | Retries race on agent state | `npm run demo:continuity` |
+| [`agent-latch-witness`](./packages/witness) | Stale memory poisons the prompt | `npm run demo:witness` |
 
 ```bash
-npm run demo:budget
-npm run demo:approval
-npm run demo:idempotency
-npm run example:gates   # latch + approval + budget stacked
+npm run example:gates     # latch + approval + budget
+npm run example:compose   # full write path (5 gates)
+npm run example:langgraph # claim-before-tool vs checkpoint re-dispatch
 ```
 
 ## API

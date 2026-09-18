@@ -7,6 +7,9 @@
  * to undo — they only record mitigation.
  */
 
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
 export type Reversibility = "compensatable" | "irreversible";
 
 export type EffectStatus =
@@ -67,6 +70,7 @@ export class EffectLog {
     const ts = now();
     const rec: EffectRecord = { ...partial, createdAt: ts, updatedAt: ts };
     this.records.push(rec);
+    this.onChange();
     return rec;
   }
 
@@ -74,8 +78,12 @@ export class EffectLog {
     const rec = this.records.find((r) => r.id === id);
     if (!rec) throw new SagaError(`Unknown effect: ${id}`, { id });
     Object.assign(rec, patch, { updatedAt: now() });
+    this.onChange();
     return rec;
   }
+
+  /** Hook for durable backends. */
+  protected onChange(): void {}
 
   /** Effects that need reconcile after crash (intent without done). */
   inFlight(): EffectRecord[] {
@@ -84,6 +92,32 @@ export class EffectLog {
 
   stack(): EffectRecord[] {
     return this.records.filter((r) => r.status === "done");
+  }
+}
+
+/**
+ * Single-node file-backed effect log.
+ * Multi-node / crash-safe sagas still need a shared store + reconcile — this is not that.
+ */
+export class FileEffectLog extends EffectLog {
+  constructor(private readonly path: string) {
+    super();
+    this.load();
+  }
+
+  private load(): void {
+    try {
+      if (!existsSync(this.path)) return;
+      const raw = JSON.parse(readFileSync(this.path, "utf8")) as EffectRecord[];
+      if (Array.isArray(raw)) this.records.push(...raw);
+    } catch {
+      // empty start
+    }
+  }
+
+  protected override onChange(): void {
+    mkdirSync(dirname(this.path), { recursive: true });
+    writeFileSync(this.path, JSON.stringify(this.records, null, 2), "utf8");
   }
 }
 

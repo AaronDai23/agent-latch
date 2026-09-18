@@ -571,16 +571,24 @@ export class IdempotencyGate {
       }
 
       if (existing.status === "pending" || existing.status === "unknown") {
-        if (ts < existing.leaseUntil && existing.leaseOwner !== this.workerId) {
+        // Valid lease: block re-entry for ANY worker (including same workerId).
+        // LangGraph / Temporal often re-dispatch in the same process while the
+        // original tool node is still running — that must not re-execute.
+        if (ts < existing.leaseUntil) {
+          const other = existing.leaseOwner !== this.workerId;
           this.log.record({
             tool,
             key,
             decision: "inflight",
             args: snapshot,
-            reason: `lease held by ${existing.leaseOwner} until ${new Date(existing.leaseUntil).toISOString()}`,
+            reason: other
+              ? `lease held by ${existing.leaseOwner} until ${new Date(existing.leaseUntil).toISOString()}`
+              : `lease held by this worker until ${new Date(existing.leaseUntil).toISOString()}`,
           });
           throw new IdempotencyError(
-            `Intent ${key} is leased by another worker`,
+            other
+              ? `Intent ${key} is leased by another worker`
+              : `Intent ${key} is already executing (lease held)`,
             {
               key,
               tool,
@@ -591,7 +599,7 @@ export class IdempotencyGate {
           );
         }
 
-        // Lease expired or same worker — must reconcile before any re-execute.
+        // Lease expired — must reconcile before any re-execute.
         return this.resolveUnresolved(existing, tool, snapshot, leaseMs);
       }
 

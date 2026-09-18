@@ -76,6 +76,19 @@ test("active lease blocks other workers", async () => {
   );
 });
 
+test("active lease blocks same worker re-entry (LangGraph-style)", async () => {
+  const idem = createIdempotency({ mode: "dev", workerId: "w1", leaseMs: 60_000 });
+  await idem.begin("charge", { amount: 10 });
+  await assert.rejects(
+    () => idem.begin("charge", { amount: 10 }),
+    (e: unknown) => {
+      assert.ok(e instanceof IdempotencyError);
+      assert.match(e.message, /already executing/);
+      return true;
+    },
+  );
+});
+
 test("finance mode refuses blind re-execute without reconcile", async () => {
   const idem = createIdempotency({ mode: "finance", leaseMs: 1, workerId: "w1" });
   const first = await idem.begin("charge", { amount: 10 });

@@ -73,6 +73,23 @@ npm install agent-latch-budget agent-latch-approval
 - Companions ship as `agent-latch-*` (or `agent-outcome` for receipts).
 - `prepublishOnly` runs tests + build before each publish.
 
+## Publish saga / continuity / witness
+
+```bash
+npm test
+npm run publish:saga
+npm run publish:continuity
+npm run publish:witness
+```
+
+Or per package:
+
+```bash
+cd packages/saga && npm test && npm run build && npm publish --access public
+cd ../continuity && npm test && npm run build && npm publish --access public
+cd ../witness && npm test && npm run build && npm publish --access public
+```
+
 ## Publish idempotency
 
 ```bash
